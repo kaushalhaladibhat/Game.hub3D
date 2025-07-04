@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ping Pong Game</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: linear-gradient(135deg, #0f0f0f, #1e1e1e);
+      font-family: 'Segoe UI', sans-serif;
+    }
+    canvas { display: block; }
+
+    #scoreboard {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #0ff;
+      font-size: 20px;
+      font-weight: bold;
+      background: rgba(0,0,0,0.6);
+      padding: 8px 20px;
+      border-radius: 10px;
+      z-index: 2;
+      box-shadow: 0 0 10px #0ff;
+    }
+
+    #addBallBtn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 16px;
+      padding: 6px 12px;
+      background: #0ff;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      z-index: 2;
+      box-shadow: 0 0 10px #0ff;
+    }
+
+    #addBallBtn:hover {
+      background: #00cccc;
+    }
+
+    #gameOverScreen {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 48px;
+      font-weight: bold;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.8s ease;
+      z-index: 3;
+    }
+
+    #gameOverScreen.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #restartBtn {
+      margin-top: 20px;
+      font-size: 20px;
+      padding: 10px 25px;
+      background: #0ff;
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s ease;
+      box-shadow: 0 0 10px #0ff;
+    }
+
+    #restartBtn:hover {
+      background: #00bbbb;
+    }
+  </style>
+</head>
+<body>
+  <div id="scoreboard">Score: 0 | Best: 0</div>
+  <button id="addBallBtn">+ Add Ball</button>
+  <div id="gameOverScreen">
+    GAME OVER
+    <button id="restartBtn">RESTART</button>
+  </div>
+  <canvas id="game"></canvas>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    const scoreboard = document.getElementById("scoreboard");
+    const gameOverScreen = document.getElementById("gameOverScreen");
+    const restartBtn = document.getElementById("restartBtn");
+    const addBallBtn = document.getElementById("addBallBtn");
+
+    const paddle = {
+      width: 120,
+      height: 15,
+      x: canvas.width / 2 - 60,
+      y: canvas.height - 30,
+      speed: 10,
+      dx: 0
+    };
+
+    const balls = [createBall()];
+
+    function createBall() {
+      return {
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        size: 15,
+        dx: (Math.random() > 0.5 ? 1 : -1) * 5,
+        dy: -5,
+        baseSpeed: 50
+      };
+    }
+
+    let score = 0;
+    let bestScore = 0;
+    let gameRunning = true;
+
+    function updateScoreboard() {
+      scoreboard.textContent = Score: ${score} | Best: ${bestScore};
+    }
+
+    function getBallColor(ball) {
+      const speed = Math.sqrt(ball.dx ** 2 + ball.dy ** 2);
+      if (speed <= 55) return "#00ff00";
+      if (speed <= 60) return "#ffff00";
+      if (speed <= 70) return "#ff9900";
+      return "#ff0000";
+    }
+
+    function drawPaddle() {
+      ctx.fillStyle = "#0ff";
+      ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+    }
+
+    function drawBall(ball) {
+      ctx.fillStyle = getBallColor(ball);
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.size / 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function movePaddle() {
+      paddle.x += paddle.dx;
+      if (paddle.x < 0) paddle.x = 0;
+      if (paddle.x + paddle.width > canvas.width) paddle.x = canvas.width - paddle.width;
+baseSpeed: 50
+    }
+
+    function updateBall(ball, index) {
+      ball.x += ball.dx;
+      ball.y += ball.dy;
+
+      if (ball.x - ball.size / 2 < 0 || ball.x + ball.size / 2 > canvas.width) ball.dx *= -1;
+      if (ball.y - ball.size / 2 < 0) ball.dy *= -1;
+
+      if (
+        ball.y + ball.size / 2 >= paddle.y &&
+        ball.x >= paddle.x &&
+        ball.x <= paddle.x + paddle.width
+      ) {
+        score++;
+        bestScore = Math.max(bestScore, score);
+        updateScoreboard();
+        const speedMultiplier = 1 + Math.floor(score / 10) * 0.15;
+        const angle = Math.atan2(ball.dy, ball.dx);
+        const newSpeed = ball.baseSpeed * speedMultiplier;
+        ball.dx = newSpeed * Math.cos(angle);
+        ball.dy = -Math.abs(newSpeed * Math.sin(angle));
+        ball.y = paddle.y - ball.size / 2;
+      }
+
+      if (ball.y - ball.size / 2 > canvas.height) {
+        balls.splice(index, 1);
+        if (balls.length === 0) endGame();
+      }
+    }
+
+    function endGame() {
+      gameRunning = false;
+      navigator.vibrate?.(300);
+      gameOverScreen.classList.add("show");
+    }
+
+    function restartGame() {
+      score = 0;
+      bestScore = 0;
+      balls.length = 0;
+      balls.push(createBall());
+      updateScoreboard();
+      resetBall(balls[0]);
+      gameRunning = true;
+      gameOverScreen.classList.remove("show");
+      gameLoop();
+    }
+
+    function resetBall(ball) {
+      ball.x = canvas.width / 2;
+      ball.y = canvas.height / 2;
+      ball.dx = ball.baseSpeed * (Math.random() > 0.5 ? 1 : -1);
+      ball.dy = -ball.baseSpeed;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawPaddle();
+      balls.forEach(drawBall);
+    }
+
+    function update() {
+      movePaddle();
+      balls.forEach((ball, index) => updateBall(ball, index));
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === "ArrowRight") paddle.dx = paddle.speed;
+      else if (e.key === "ArrowLeft") paddle.dx = -paddle.speed;
+    });
+
+    document.addEventListener('keyup', e => {
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") paddle.dx = 0;
+    });
+
+    addBallBtn.addEventListener('click', () => {
+      if (gameRunning) balls.push(createBall());
+    });
+
+    restartBtn.addEventListener("click", restartGame);
+
+    updateScoreboard();
+    gameLoop();
+  </script>
+</body>
+</html>
+ 
+
+piing pong

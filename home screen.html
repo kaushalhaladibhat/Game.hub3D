@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Game Hub 3D</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Consolas;
+      background: linear-gradient(135deg, #0f0f0f, #1e1e1e);
+      color: white;
+      overflow: hidden;
+      perspective: 1000px;
+    }
+    h1 {
+      text-align: center;
+      margin-top: 50px;
+      font-size: 48px;
+      text-shadow: 0 0 15px #0ff;
+    }
+    .container {
+      display: flex;
+      justify-content: center;
+      gap: 50px;
+      margin-top: 80px;
+      transform-style: preserve-3d;
+    }
+    .card {
+      width: 250px;
+      height: 300px;
+      background: linear-gradient(145deg, #222, #111);
+      border-radius: 20px;
+      box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+      transition: transform 0.4s, box-shadow 0.4s;
+      text-align: center;
+      padding: 20px;
+      cursor: pointer;
+      transform: rotateY(0deg);
+    }
+    .card:hover {
+      transform: rotateY(15deg) scale(1.05);
+      box-shadow: 0 25px 60px rgba(0,255,255,0.6);
+    }
+    .card h2 {
+      margin-top: 30px;
+      font-size: 24px;
+      color: #0ff;
+      text-shadow: 0 0 10px #0ff;
+    }
+    .card p {
+      margin-top: 10px;
+      color: #ccc;
+      font-size: 14px;
+    }
+    .start-btn {
+      margin-top: 30px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #0ff;
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      box-shadow: 0 0 10px #0ff;
+      transition: background 0.3s;
+    }
+    .start-btn:hover {
+      background: #00dddd;
+    }
+    #game-frame {
+      display: none;
+      width: 100vw;
+      height: 100vh;
+      border: none;
+      z-index: 10;
+    }
+    #homeBtn {
+      display: none;
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      padding: 10px 16px;
+      font-size: 16px;
+      background: #0ff;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      z-index: 20;
+    }
+    footer {
+      position: absolute;
+      bottom: 20px;
+      width: 100%;
+      text-align: center;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HOME SCREEN -->
+  <h1 id="main-title">Game Hub 3D</h1>
+  <div class="container" id="menu">
+    <div class="card" onclick="loadGame('maze')">
+      <h2>Maze Game</h2>
+      <p>Navigate the maze and reach the goal. Avoid getting lost!(new levels created by AI)</p>
+      <button class="start-btn">Play</button>
+    </div>
+    <div class="card" onclick="loadGame('memory')">
+      <h2>Memory Game</h2>
+      <p>Remember the sequence. Sharpen your brain with patterns no sound so that it will be more tricky!</p>
+      <button class="start-btn">Play</button>
+    </div>
+    <div class="card" onclick="loadGame('pingpong')">
+      <h2>Ping Pong</h2>
+      <p>Classic ping pong with power-ups. Don't miss the ball!. only to be used in laptop/computer</p>
+      <button class="start-btn">Play</button>
+    </div>
+  </div>
+
+  <!-- EMBEDDED GAMES -->
+  <button id="homeBtn" onclick="goHome()">Home</button>
+  <iframe id="game-frame"></iframe>
+
+  <footer id="footer">copyright @kaushalll</footer>
+
+  <script>
+    const gameFrame = document.getElementById("game-frame");
+    const homeBtn = document.getElementById("homeBtn");
+    const menu = document.getElementById("menu");
+    const title = document.getElementById("main-title");
+    const footer = document.getElementById("footer");
+
+    function loadGame(game) {
+      let file = "";
+      if (game === "maze") file = "maze.html";
+      else if (game === "memory") file = "memory game.html";
+      else if (game === "pingpong") file = "ping pong game.html";
+
+      gameFrame.src = file;
+      gameFrame.style.display = "block";
+      homeBtn.style.display = "block";
+      menu.style.display = "none";
+      title.style.display = "none";
+      footer.style.display = "none";
+    }
+
+    function goHome() {
+      gameFrame.src = "";
+      gameFrame.style.display = "none";
+      homeBtn.style.display = "none";
+      menu.style.display = "flex";
+      title.style.display = "block";
+      footer.style.display = "block";
+    }
+  </script>
+</body>
+</html>

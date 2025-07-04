@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Maze Game</title>
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #0f0f0f, #1e1e1e);
+      color: white;
+      font-family: 'Segoe UI', Consolas;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    canvas {
+      border: 4px solid #0ff;
+      background: #000;
+      margin-top: 20px;
+      box-shadow: 0 0 20px #0ff;
+    }
+    #controls {
+      margin-top: 10px;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #0ff;
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      box-shadow: 0 0 10px #0ff;
+    }
+    button:hover {
+      background: #00dddd;
+    }
+    #win-screen {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.8);
+      border: 2px solid #0ff;
+      padding: 40px;
+      text-align: center;
+      display: none;
+      color: #0f0;
+      font-size: 24px;
+      box-shadow: 0 0 15px #0ff;
+    }
+    #win-screen button {
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Maze Game - Use Arrow Keys/WASD/Buttons</h1>
+  <canvas id="mazeCanvas" width="600" height="600"></canvas>
+  <div id="controls">
+    <button onclick="movePlayer(0,-1)">? Front</button>
+    <div>
+      <button onclick="movePlayer(-1,0)">? Left</button>
+      <button onclick="movePlayer(1,0)">? Right</button>
+    </div>
+    <button onclick="movePlayer(0,1)">? Back</button>
+  </div>
+
+  <div id="win-screen">
+    <div>YOU WON!!!</div>
+    <div id="scoreDisplay"></div>
+    <button onclick="nextGame()">NEXT GAME</button>
+    <button onclick="replayGame()">REPLAY</button>
+    <button onclick="goHome()">HOME</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('mazeCanvas');
+    const ctx = canvas.getContext('2d');
+    const rows = 20, cols = 20;
+    const cellSize = canvas.width / cols;
+    const grid = [];
+    const stack = [];
+    let player = { x: 0, y: 0 };
+    let movePath = [{ x: 0, y: 0 }];
+    let startTime, endTime;
+
+    const moveSound = new Audio("https://freesound.org/data/previews/331/331912_3248244-lq.mp3");
+    const winSound = new Audio("https://freesound.org/data/previews/514/514260_10226544-lq.mp3");
+
+    class Cell {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.walls = [true, true, true, true];
+        this.visited = false;
+      }
+      draw() {
+        const x = this.x * cellSize;
+        const y = this.y * cellSize;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        if (this.walls[0]) drawLine(x, y, x + cellSize, y);
+        if (this.walls[1]) drawLine(x + cellSize, y, x + cellSize, y + cellSize);
+        if (this.walls[2]) drawLine(x + cellSize, y + cellSize, x, y + cellSize);
+        if (this.walls[3]) drawLine(x, y + cellSize, x, y);
+      }
+      highlight(color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(this.x * cellSize, this.y * cellSize, cellSize, cellSize);
+      }
+      checkNeighbors() {
+        const neighbors = [];
+        const top = grid[index(this.x, this.y - 1)];
+        const right = grid[index(this.x + 1, this.y)];
+        const bottom = grid[index(this.x, this.y + 1)];
+        const left = grid[index(this.x - 1, this.y)];
+        if (top && !top.visited) neighbors.push(top);
+        if (right && !right.visited) neighbors.push(right);
+        if (bottom && !bottom.visited) neighbors.push(bottom);
+        if (left && !left.visited) neighbors.push(left);
+        if (neighbors.length > 0) {
+          return neighbors[Math.floor(Math.random() * neighbors.length)];
+        }
+        return undefined;
+      }
+    }
+
+    function drawLine(x1, y1, x2, y2) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    function index(x, y) {
+      if (x < 0 || y < 0 || x >= cols || y >= rows) return -1;
+      return x + y * cols;
+    }
+
+    function removeWalls(a, b) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      if (dx === 1) { a.walls[3] = false; b.walls[1] = false; }
+      else if (dx === -1) { a.walls[1] = false; b.walls[3] = false; }
+      if (dy === 1) { a.walls[0] = false; b.walls[2] = false; }
+      else if (dy === -1) { a.walls[2] = false; b.walls[0] = false; }
+    }
+
+    function generateMaze() {
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          grid.push(new Cell(x, y));
+        }
+      }
+      let current = grid[0];
+      const interval = setInterval(() => {
+        current.visited = true;
+        const next = current.checkNeighbors();
+        if (next) {
+          next.visited = true;
+          stack.push(current);
+          removeWalls(current, next);
+          current = next;
+        } else if (stack.length > 0) {
+          current = stack.pop();
+        } else {
+          clearInterval(interval);
+          drawMaze();
+          startTime = Date.now();
+        }
+        drawMaze();
+      }, 10);
+    }
+
+    function drawMaze() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      grid.forEach(c => c.draw());
+      grid[0].highlight("#0f0");
+      grid[grid.length - 1].highlight("#f00");
+      ctx.strokeStyle = "#0ff";
+      ctx.lineWidth = 2;
+      for (let i = 1; i < movePath.length; i++) {
+        const a = movePath[i - 1];
+        const b = movePath[i];
+        ctx.beginPath();
+        ctx.moveTo(a.x * cellSize + cellSize / 2, a.y * cellSize + cellSize / 2);
+        ctx.lineTo(b.x * cellSize + cellSize / 2, b.y * cellSize + cellSize / 2);
+        ctx.stroke();
+      }
+      drawPlayer();
+    }
+
+    function drawPlayer() {
+      const px = player.x * cellSize + cellSize / 2;
+      const py = player.y * cellSize + cellSize / 2;
+      const radius = cellSize * 0.3;
+      ctx.beginPath();
+      ctx.arc(px, py, radius, 0, Math.PI * 2);
+      ctx.fillStyle = "#ff0";
+      ctx.fill();
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function movePlayer(dx, dy) {
+      const currentCell = grid[index(player.x, player.y)];
+      const targetX = player.x + dx;
+      const targetY = player.y + dy;
+      const targetCell = grid[index(targetX, targetY)];
+      if (!targetCell) return;
+      if ((dx === -1 && !currentCell.walls[3]) ||
+          (dx === 1 && !currentCell.walls[1]) ||
+          (dy === -1 && !currentCell.walls[0]) ||
+          (dy === 1 && !currentCell.walls[2])) {
+        player.x = targetX;
+        player.y = targetY;
+        movePath.push({ x: player.x, y: player.y });
+        moveSound.play();
+        drawMaze();
+        checkWin();
+      }
+    }
+
+    function checkWin() {
+      if (player.x === cols -1 && player.y === rows + 1) {
+        endTime = Date.now();
+        const timeTaken = Math.floor((endTime - startTime) / 1000);
+        const score = Math.max(100, 100 - movePath.length + 1);
+        winSound.play();
+        document.getElementById("scoreDisplay").innerText = Score: ${score}/100 | Time: ${timeTaken}s;
+        document.getElementById("win-screen").style.display = "block";
+      }
+    }
+
+    function nextGame() {
+      location.reload();
+    }
+
+    function replayGame() {
+      player = { x: 0, y: 0 };
+      movePath = [{ x: 0, y: 0 }];
+      document.getElementById("win-screen").style.display = "none";
+      drawMaze();
+    }
+
+    function goHome() {
+      location.href = "home screen.html";
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowUp" || e.key === "w" || e.key === "W" || e.key === "8") movePlayer(0, -1);
+      else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S" || e.key === "2") movePlayer(0, 1);
+      else if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A" || e.key === "4") movePlayer(-1, 0);
+      else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D" || e.key === "6") movePlayer(1, 0);
+    });
+
+    generateMaze();
+  </script>
+</body>
+</html>
